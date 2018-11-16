@@ -1,0 +1,22 @@
+Resources:
+  MyELB:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      AvailabilityZones: 
+      - ap-south-1a
+      CrossZone: 'True'
+      Instances: 
+      - "i-02f7402670ca58d8e"
+      Listeners:
+        - LoadBalancerPort: '80'
+          InstancePort: '80'
+          Protocol: HTTP
+      HealthCheck:
+        Target: HTTP:80/index.html
+        HealthyThreshold: '3'
+        UnhealthyThreshold: '2'
+        Interval: '5'
+        Timeout: '2'
+      Tags:
+        - Key: Name
+          Value: MyELB

@@ -1,0 +1,31 @@
+Resources:
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-4fc58420
+      KeyName: aws-keypair
+      SecurityGroups: 
+        - WebServer
+      UserData: !Base64 |
+        #!/bin/bash 
+        yum update -y
+        yum install httpd -y
+        service httpd start
+        cd /var/www/html/
+        echo "Cloudformation is awesome" > index.html
+        chkconfig httpd on
+  AutoScaling:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones:
+        Fn::GetAZs: ""
+      LaunchConfigurationName:
+        Ref: "LaunchConfig"
+      MaxSize: "2"
+      MinSize: "2"
+      Tags:
+        - Key: Name
+          Value: MyAutoScalingGroup
+          PropagateAtLaunch: "true"
+

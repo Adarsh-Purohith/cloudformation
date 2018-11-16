@@ -1,0 +1,160 @@
+Resources:
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: MyVPC
+  MyPublicSubnets:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-south-1a
+      CidrBlock: 10.0.1.0/24
+      VpcId:
+        Ref: MyVPC
+      MapPublicIpOnLaunch: "true"
+      Tags:
+      - Key: Name
+        Value: MyPublicSubnet
+  MyPrivateSubnets:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-south-1a
+      CidrBlock: 10.0.2.0/24
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: MyPrivateSubnet
+  MyInternetGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: MyIGW
+  AttachIGW:
+    DependsOn: MyInternetGW
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      InternetGatewayId:
+        Ref: MyInternetGW
+  DMZSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: DMZServers
+      GroupDescription: For instance allow ssh, https and http ports
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 0.0.0.0/0
+      Tags:
+      - Key: Name
+        Value: MyDMZSG
+      VpcId:
+        Ref: MyVPC
+  InternalSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: InternalServers
+      GroupDescription: For instance allow ssh, https and http ports
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: 10.0.1.0/24
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: 10.0.1.0/24
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 10.0.1.0/24
+      Tags:
+      - Key: Name
+        Value: MyInternalSG
+      VpcId:
+        Ref: MyVPC
+  InternetRoute:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: InternetRoute
+  PublicSubnetInternetRoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: MyPublicSubnets
+      RouteTableId:
+        Ref: InternetRoute
+  MyInternetRoute:
+    DependsOn: MyInternetGW
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: InternetRoute
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: 
+        Ref: MyInternetGW
+  NatGateway:
+    DependsOn: AttachIGW
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - EIP
+        - AllocationId
+      SubnetId:
+        Ref: MyPublicSubnets
+      Tags:
+      - Key: Name
+        Value: NATGateway
+  EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  InternalToNatRoute:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: RoutetoNAT
+  PrivateSubnetInternetRoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: MyPrivateSubnets
+      RouteTableId:
+        Ref: InternalToNatRoute
+  PrivateToInternetRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: InternalToNatRoute
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: 
+        Ref: NatGateway
+  
+  
+
+    
+      
+
